@@ -77,7 +77,7 @@ export function TaskDetailModal() {
           <DialogTitle className="sr-only">Task Detail</DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-1 flex-col overflow-hidden px-6 pb-5">
+        <div className="flex flex-1 flex-col min-h-0 px-6 pb-5">
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}

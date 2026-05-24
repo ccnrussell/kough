@@ -58,7 +58,7 @@ export function Column({ column }: ColumnProps) {
   return (
     <div
       ref={setNodeRef}
-      className={`min-w-[280px] max-w-[280px] flex flex-col rounded-lg bg-card border transition-colors ${
+      className={`min-w-[280px] max-w-[280px] flex flex-col rounded-lg bg-card border transition-colors min-h-0 ${
         isOver ? "border-ring bg-ring/5" : "border-border"
       }`}
     >

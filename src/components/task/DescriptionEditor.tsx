@@ -89,7 +89,7 @@ export function DescriptionEditor({ content, onSave }: DescriptionEditorProps) {
   return (
     <div
       ref={containerRef}
-      className="cm-wrapper flex-1 min-h-[200px] overflow-y-auto rounded-md border border-border bg-secondary/30 resize-y"
+      className="cm-wrapper grow min-h-[200px] rounded-md border border-border bg-secondary/30 resize-y"
     />
   );
 }
