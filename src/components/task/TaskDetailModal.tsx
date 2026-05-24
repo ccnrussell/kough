@@ -66,7 +66,7 @@ export function TaskDetailModal() {
 
   return (
     <Dialog open={true} onOpenChange={() => closeTaskDetail()}>
-      <DialogContent className="max-w-3xl h-[85vh] flex flex-col bg-card border-border p-0 gap-0">
+      <DialogContent className="max-w-4xl h-[90vh] flex flex-col bg-card border-border p-0 gap-0">
         <DialogHeader className="px-6 pt-5 pb-0">
           <DialogTitle className="sr-only">Task Detail</DialogTitle>
         </DialogHeader>
