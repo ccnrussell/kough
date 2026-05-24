@@ -14,6 +14,7 @@ import { useTagStore } from "@/stores/tagStore";
 import { PRIORITY_CONFIG, type Priority } from "@/types";
 import { cn } from "@/lib/utils";
 import { DescriptionEditor } from "./DescriptionEditor";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 export function TaskDetailModal() {
   const { activeTaskId, closeTaskDetail } = useUIStore();
@@ -22,6 +23,7 @@ export function TaskDetailModal() {
   const [title, setTitle] = useState("");
   const [priority, setPriority] = useState<Priority>("medium");
   const [dueDate, setDueDate] = useState("");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const task = tasks.find((t) => t.id === activeTaskId);
   const taskTagList = activeTaskId ? taskTags[activeTaskId] || [] : [];
@@ -46,6 +48,10 @@ export function TaskDetailModal() {
   };
 
   const handleDelete = async () => {
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
     await deleteTask(task.id);
     closeTaskDetail();
   };
@@ -171,6 +177,14 @@ export function TaskDetailModal() {
             </Button>
           </div>
         </div>
+        <ConfirmDialog
+          open={showDeleteConfirm}
+          onOpenChange={setShowDeleteConfirm}
+          title="Delete Task?"
+          description="This task will be moved to trash. You can restore it within 30 days."
+          confirmLabel="Delete Task"
+          onConfirm={handleConfirmDelete}
+        />
       </DialogContent>
     </Dialog>
   );
