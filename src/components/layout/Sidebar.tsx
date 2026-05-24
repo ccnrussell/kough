@@ -42,6 +42,18 @@ export function Sidebar() {
           Board
         </button>
         <button
+          onClick={() => setActiveView("trash")}
+          className={cn(
+            "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors",
+            activeView === "trash"
+              ? "bg-accent text-accent-foreground"
+              : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+          )}
+        >
+          <Trash2 size={14} />
+          Trash
+        </button>
+        <button
           onClick={() => setActiveView("activity")}
           className={cn(
             "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors",

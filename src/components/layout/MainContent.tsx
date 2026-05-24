@@ -7,6 +7,7 @@ import { TitleBar } from "./TitleBar";
 import { Sidebar } from "./Sidebar";
 import { Board } from "@/components/board/Board";
 import { ActivityView } from "@/components/activity/ActivityView";
+import { TrashView } from "@/components/layout/TrashView";
 import { TaskDetailModal } from "@/components/task/TaskDetailModal";
 import { TagFilter } from "@/components/tags/TagFilter";
 
@@ -40,6 +41,7 @@ export function MainContent() {
             </>
           )}
           {activeView === "activity" && <ActivityView />}
+          {activeView === "trash" && <TrashView />}
         </main>
       </div>
       {taskDetailOpen && <TaskDetailModal />}

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-type ViewType = "board" | "activity";
+type ViewType = "board" | "activity" | "trash";
 
 interface UIState {
   sidebarOpen: boolean;
