@@ -72,12 +72,12 @@ export function TaskDetailModal() {
 
   return (
     <Dialog open={true} onOpenChange={() => closeTaskDetail()}>
-      <DialogContent className="max-w-4xl h-[90vh] flex flex-col bg-card border-border p-0 gap-0 resize overflow-auto">
+      <DialogContent className="max-w-4xl h-[90vh] flex flex-col bg-card border-border p-0 gap-0">
         <DialogHeader className="px-6 pt-5 pb-0">
           <DialogTitle className="sr-only">Task Detail</DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-1 flex-col min-h-0 px-6 pb-5">
+        <div className="flex flex-1 flex-col overflow-hidden px-6 pb-5">
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
