@@ -2,6 +2,8 @@
 pub mod tracker;
 #[cfg(windows)]
 pub mod windows;
+#[cfg(windows)]
+pub mod icon;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
