@@ -108,6 +108,17 @@ ALTER TABLE browser_usage ADD COLUMN last_seen TEXT;
 UPDATE app_usage SET last_seen = date || 'T00:00:00Z' WHERE last_seen IS NULL;
 UPDATE browser_usage SET last_seen = date || 'T00:00:00Z' WHERE last_seen IS NULL;
 ",
+    "
+CREATE INDEX IF NOT EXISTS idx_app_usage_date ON app_usage(date);
+CREATE INDEX IF NOT EXISTS idx_browser_usage_date ON browser_usage(date);
+CREATE INDEX IF NOT EXISTS idx_app_usage_last_seen ON app_usage(last_seen);
+CREATE INDEX IF NOT EXISTS idx_browser_usage_last_seen ON browser_usage(last_seen);
+
+CREATE TABLE IF NOT EXISTS app_icons (
+    app_name TEXT PRIMARY KEY,
+    icon_data TEXT NOT NULL
+);
+",
 ];
 
 fn column_exists(conn: &Connection, table: &str, column: &str) -> Result<bool, AppError> {

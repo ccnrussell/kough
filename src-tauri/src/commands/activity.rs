@@ -49,7 +49,17 @@ pub fn get_active_tracking() -> Result<ActiveTracking, AppError> {
 
 #[cfg(windows)]
 #[tauri::command]
-pub fn get_app_icon(app_name: String) -> Result<String, AppError> {
+pub fn get_app_icon(
+    db: State<'_, DbState>,
+    app_name: String,
+) -> Result<String, AppError> {
+    let conn = lock_conn!(db);
+
+    if let Ok(Some(cached)) = db::activity_repository::get_icon(&conn, &app_name) {
+        return Ok(cached);
+    }
+    drop(conn);
+
     use windows::Win32::System::Threading::{OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_NAME_WIN32, QueryFullProcessImageNameW};
     use windows::Win32::Foundation::{CloseHandle, MAX_PATH};
     use windows::core::PWSTR;
@@ -90,6 +100,8 @@ pub fn get_app_icon(app_name: String) -> Result<String, AppError> {
                 if name == target {
                     unsafe { let _ = CloseHandle(handle); }
                     if let Some(icon) = crate::tracker::icon::extract_icon_from_exe(&path) {
+                        let conn = lock_conn!(db);
+                        let _ = db::activity_repository::save_icon(&conn, &app_name, &icon.base64);
                         return Ok(icon.base64);
                     }
                     return Ok(String::new());

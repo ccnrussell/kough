@@ -42,6 +42,31 @@ fn create_backup(db_path: &std::path::Path) -> Result<(), crate::error::AppError
     Ok(())
 }
 
+fn one_time_purge(conn: &Connection) -> Result<(), crate::error::AppError> {
+    let version: i64 = conn.pragma_query_value(None, "user_version", |row| row.get(0))?;
+    if version >= 1 {
+        return Ok(());
+    }
+
+    conn.execute(
+        "DELETE FROM browser_usage WHERE domain IN (
+            SELECT domain FROM browser_usage GROUP BY domain HAVING SUM(total_secs) < 600
+        )",
+        [],
+    )?;
+
+    conn.execute(
+        "DELETE FROM app_usage WHERE app_name IN (
+            SELECT app_name FROM app_usage GROUP BY app_name HAVING SUM(total_secs) < 600
+        )",
+        [],
+    )?;
+
+    conn.pragma_update(None, "user_version", 1)?;
+
+    Ok(())
+}
+
 pub fn init_db(app: &AppHandle) -> Result<Connection, crate::error::AppError> {
     let app_dir = app.path().app_data_dir().map_err(|e| {
         crate::error::AppError::Database(rusqlite::Error::InvalidParameterName(e.to_string()))
@@ -64,6 +89,8 @@ pub fn init_db(app: &AppHandle) -> Result<Connection, crate::error::AppError> {
     run_migrations(&conn)?;
 
     crate::db::repository::purge_old_trash(&conn)?;
+
+    one_time_purge(&conn)?;
 
     Ok(conn)
 }

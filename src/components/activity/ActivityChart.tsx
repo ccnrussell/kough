@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+import { useActivityStore } from "@/stores/activityStore";
 import type { AppUsageSummary } from "@/types";
 
 interface ActivityChartProps {
@@ -25,7 +27,16 @@ const GRADIENT_COLORS = [
 ];
 
 export function ActivityChart({ summary }: ActivityChartProps) {
+  const { iconCache, fetchAppIcon } = useActivityStore();
   const filtered = summary.filter((s) => s.total_secs >= 600);
+
+  useEffect(() => {
+    const appNames = filtered.map((s) => s.app_name);
+    appNames.forEach((name) => {
+      fetchAppIcon(name);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [summary]);
 
   if (filtered.length === 0) {
     return (
@@ -47,12 +58,20 @@ export function ActivityChart({ summary }: ActivityChartProps) {
       {filtered.map((item, i) => {
         const widthPercent = Math.max((Math.sqrt(item.total_secs) / maxSqrt) * 100, 3);
         const gradient = GRADIENT_COLORS[i % GRADIENT_COLORS.length];
+        const iconSrc = iconCache[item.app_name];
         return (
           <div key={item.app_name} className="group">
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-sm font-medium text-foreground">
-                {item.app_name.replace(".exe", "")}
-              </span>
+              <div className="flex items-center gap-2">
+                {iconSrc ? (
+                  <img src={iconSrc} alt="" className="h-5 w-5 rounded flex-shrink-0" />
+                ) : (
+                  <div className="h-5 w-5 rounded bg-secondary flex-shrink-0" />
+                )}
+                <span className="text-sm font-medium text-foreground">
+                  {item.app_name.replace(".exe", "")}
+                </span>
+              </div>
               <span className="text-sm text-muted-foreground">
                 {formatDuration(item.total_secs)}
               </span>

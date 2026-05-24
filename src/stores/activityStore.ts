@@ -9,11 +9,13 @@ interface ActivityState {
   loading: boolean;
   startDate: string;
   endDate: string;
+  iconCache: Record<string, string>;
 
   fetchAppSummary: () => Promise<void>;
   fetchBrowserSummary: () => Promise<void>;
   fetchActiveTracking: () => Promise<void>;
   setDateRange: (start: string, end: string) => void;
+  fetchAppIcon: (appName: string) => Promise<void>;
 }
 
 function today(): string {
@@ -33,6 +35,7 @@ export const useActivityStore = create<ActivityState>((set, get) => ({
   loading: false,
   startDate: today(),
   endDate: tomorrow(),
+  iconCache: {},
 
   fetchAppSummary: async () => {
     const { startDate, endDate } = get();
@@ -54,5 +57,14 @@ export const useActivityStore = create<ActivityState>((set, get) => ({
 
   setDateRange: (start: string, end: string) => {
     set({ startDate: start, endDate: end });
+  },
+
+  fetchAppIcon: async (appName: string) => {
+    const { iconCache } = get();
+    if (iconCache[appName]) return;
+    const iconData = await api.activity.getAppIcon(appName);
+    if (iconData) {
+      set({ iconCache: { ...iconCache, [appName]: iconData } });
+    }
   },
 }));

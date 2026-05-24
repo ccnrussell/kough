@@ -28,22 +28,38 @@ pub fn cleanup_old_activity(conn: &Connection) -> Result<(), AppError> {
     let cutoff = chrono::Utc::now() - chrono::Duration::days(7);
     let cutoff_str = cutoff.to_rfc3339();
 
-    // Delete websites with < 10 minutes total across all days, stale for 7+ days
     conn.execute(
         "DELETE FROM browser_usage WHERE last_seen < ?1 AND domain IN (
-            SELECT domain FROM browser_usage GROUP BY domain HAVING SUM(total_secs) < 600
+            SELECT domain FROM browser_usage WHERE last_seen < ?1 GROUP BY domain HAVING SUM(total_secs) < 600
         )",
         params![cutoff_str],
     )?;
 
-    // Delete apps with only 1 day of data, stale for 7+ days
     conn.execute(
         "DELETE FROM app_usage WHERE last_seen < ?1 AND app_name IN (
-            SELECT app_name FROM app_usage GROUP BY app_name HAVING COUNT(DISTINCT date) = 1
+            SELECT app_name FROM app_usage WHERE last_seen < ?1 GROUP BY app_name HAVING SUM(total_secs) < 600
         )",
         params![cutoff_str],
     )?;
 
+    Ok(())
+}
+
+pub fn get_icon(conn: &Connection, app_name: &str) -> Result<Option<String>, AppError> {
+    let mut stmt = conn.prepare("SELECT icon_data FROM app_icons WHERE app_name = ?1")?;
+    let result = stmt.query_row(params![app_name], |row| row.get::<_, String>(0));
+    match result {
+        Ok(data) => Ok(Some(data)),
+        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+        Err(e) => Err(AppError::Database(e)),
+    }
+}
+
+pub fn save_icon(conn: &Connection, app_name: &str, icon_data: &str) -> Result<(), AppError> {
+    conn.execute(
+        "INSERT OR REPLACE INTO app_icons (app_name, icon_data) VALUES (?1, ?2)",
+        params![app_name, icon_data],
+    )?;
     Ok(())
 }
 
