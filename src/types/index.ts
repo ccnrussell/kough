@@ -120,3 +120,10 @@ export interface ActiveTracking {
   app_name: string;
   domain: string | null;
 }
+
+export interface TrashItem {
+  boards: Board[];
+  columns: Column[];
+  tasks: Task[];
+  tags: Tag[];
+}

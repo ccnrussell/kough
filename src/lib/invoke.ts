@@ -5,7 +5,7 @@ import type {
   CreateColumnInput, UpdateColumnInput,
   CreateTaskInput, UpdateTaskInput, MoveTaskInput, ReorderTaskInput,
   CreateTagInput, UpdateTagInput,
-  AppUsageSummary, BrowserUsageSummary, ActiveTracking,
+  AppUsageSummary, BrowserUsageSummary, ActiveTracking, TrashItem,
 } from "@/types";
 
 const cmd = <T>(name: string, args?: Record<string, unknown>): Promise<T> =>
@@ -49,5 +49,17 @@ export const api = {
     browserSummary: (startDate: string, endDate: string) =>
       cmd<BrowserUsageSummary[]>("get_browser_usage_summary", { startDate, endDate }),
     activeTracking: () => cmd<ActiveTracking>("get_active_tracking"),
+  },
+  trash: {
+    get: () => cmd<TrashItem>("get_trash"),
+    restoreBoard: (boardId: string) => cmd<void>("restore_board", { boardId }),
+    restoreColumn: (columnId: string) => cmd<void>("restore_column", { columnId }),
+    restoreTask: (taskId: string) => cmd<void>("restore_task", { taskId }),
+    restoreTag: (tagId: string) => cmd<void>("restore_tag", { tagId }),
+    purge: () => cmd<void>("purge_old_trash"),
+    permanentlyDeleteBoard: (boardId: string) => cmd<void>("permanently_delete_board", { boardId }),
+    permanentlyDeleteColumn: (columnId: string) => cmd<void>("permanently_delete_column", { columnId }),
+    permanentlyDeleteTask: (taskId: string) => cmd<void>("permanently_delete_task", { taskId }),
+    permanentlyDeleteTag: (tagId: string) => cmd<void>("permanently_delete_tag", { tagId }),
   },
 };
