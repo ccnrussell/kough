@@ -110,14 +110,46 @@ UPDATE browser_usage SET last_seen = date || 'T00:00:00Z' WHERE last_seen IS NUL
 ",
 ];
 
+fn column_exists(conn: &Connection, table: &str, column: &str) -> Result<bool, AppError> {
+    let count: i64 = conn.query_row(
+        &format!("SELECT COUNT(*) FROM pragma_table_info('{}') WHERE name='{}'", table, column),
+        [],
+        |row| row.get(0),
+    )?;
+    Ok(count > 0)
+}
+
 pub fn run_migrations(conn: &Connection) -> Result<(), AppError> {
     for (i, sql) in MIGRATIONS.iter().enumerate() {
-        conn.execute_batch(sql).map_err(|e| {
-            AppError::Database(rusqlite::Error::InvalidParameterName(format!(
-                "Migration {} failed: {}",
-                i, e
-            )))
-        })?;
+        if i <= 2 {
+            conn.execute_batch(sql).map_err(|e| {
+                AppError::Database(rusqlite::Error::InvalidParameterName(format!(
+                    "Migration {} failed: {}",
+                    i, e
+                )))
+            })?;
+        } else {
+            for statement in sql.split(';') {
+                let trimmed = statement.trim();
+                if trimmed.is_empty() { continue; }
+                if trimmed.starts_with("ALTER TABLE") {
+                    let parts: Vec<&str> = trimmed.split_whitespace().collect();
+                    if parts.len() >= 6 && parts[3] == "ADD" && parts[4] == "COLUMN" {
+                        let table = parts[2];
+                        let column = parts[5];
+                        if column_exists(conn, table, column)? {
+                            continue;
+                        }
+                    }
+                }
+                conn.execute_batch(trimmed).map_err(|e| {
+                    AppError::Database(rusqlite::Error::InvalidParameterName(format!(
+                        "Migration {} statement failed: {}",
+                        i, e
+                    )))
+                })?;
+            }
+        }
     }
     Ok(())
 }
