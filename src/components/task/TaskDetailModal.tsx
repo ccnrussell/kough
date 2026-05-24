@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -24,9 +24,61 @@ export function TaskDetailModal() {
   const [priority, setPriority] = useState<Priority>("medium");
   const [dueDate, setDueDate] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [dialogHeight, setDialogHeight] = useState(() => Math.round(window.innerHeight * 0.85));
+  const [dialogWidth, setDialogWidth] = useState(() => Math.min(896, Math.round(window.innerWidth * 0.6)));
+  const isDragging = useRef<"vertical" | "corner" | null>(null);
+  const dragStartX = useRef(0);
+  const dragStartY = useRef(0);
+  const dragStartHeight = useRef(0);
+  const dragStartWidth = useRef(0);
 
   const task = tasks.find((t) => t.id === activeTaskId);
   const taskTagList = activeTaskId ? taskTags[activeTaskId] || [] : [];
+
+  useEffect(() => {
+    const handlePointerMove = (e: PointerEvent) => {
+      if (!isDragging.current) return;
+      const deltaY = dragStartY.current - e.clientY;
+      const newHeight = Math.max(400, Math.min(window.innerHeight - 40, dragStartHeight.current + deltaY));
+      setDialogHeight(newHeight);
+      if (isDragging.current === "corner") {
+        const deltaX = e.clientX - dragStartX.current;
+        const newWidth = Math.max(500, Math.min(window.innerWidth - 40, dragStartWidth.current + deltaX));
+        setDialogWidth(newWidth);
+      }
+    };
+    const handlePointerUp = () => {
+      isDragging.current = null;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+    };
+  }, []);
+
+  const handleVerticalResizeStart = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    isDragging.current = "vertical";
+    dragStartY.current = e.clientY;
+    dragStartHeight.current = dialogHeight;
+    document.body.style.cursor = "ns-resize";
+    document.body.style.userSelect = "none";
+  }, [dialogHeight]);
+
+  const handleCornerResizeStart = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    isDragging.current = "corner";
+    dragStartX.current = e.clientX;
+    dragStartY.current = e.clientY;
+    dragStartWidth.current = dialogWidth;
+    dragStartHeight.current = dialogHeight;
+    document.body.style.cursor = "nwse-resize";
+    document.body.style.userSelect = "none";
+  }, [dialogWidth, dialogHeight]);
 
   useEffect(() => {
     if (task) {
@@ -72,7 +124,7 @@ export function TaskDetailModal() {
 
   return (
     <Dialog open={true} onOpenChange={() => closeTaskDetail()}>
-      <DialogContent className="max-w-4xl h-[90vh] flex flex-col bg-card border-border p-0 gap-0">
+      <DialogContent className="flex flex-col bg-card border-border p-0 gap-0" style={{ height: dialogHeight, width: dialogWidth, maxWidth: "calc(100vw - 2rem)", maxHeight: "calc(100vh - 2rem)" }}>
         <DialogHeader className="px-6 pt-5 pb-0">
           <DialogTitle className="sr-only">Task Detail</DialogTitle>
         </DialogHeader>
@@ -185,6 +237,27 @@ export function TaskDetailModal() {
           confirmLabel="Delete Task"
           onConfirm={handleConfirmDelete}
         />
+        <div
+          onPointerDown={handleVerticalResizeStart}
+          className="flex items-center justify-center h-3 cursor-ns-resize hover:bg-accent/50 transition-colors"
+        >
+          <div className="flex gap-0.5">
+            <div className="w-1 h-1 rounded-full bg-muted-foreground/50" />
+            <div className="w-1 h-1 rounded-full bg-muted-foreground/50" />
+            <div className="w-1 h-1 rounded-full bg-muted-foreground/50" />
+          </div>
+        </div>
+        <div
+          onPointerDown={handleCornerResizeStart}
+          className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize hover:bg-accent/50 transition-colors rounded-bl"
+        >
+          <svg className="w-2.5 h-2.5 absolute bottom-1 right-1 text-muted-foreground/50" viewBox="0 0 6 6" fill="currentColor">
+            <circle cx="5" cy="1" r="0.7" />
+            <circle cx="5" cy="3.5" r="0.7" />
+            <circle cx="2.5" cy="3.5" r="0.7" />
+            <circle cx="5" cy="6" r="0.7" />
+          </svg>
+        </div>
       </DialogContent>
     </Dialog>
   );

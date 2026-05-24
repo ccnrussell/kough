@@ -36,7 +36,7 @@ export function MainContent() {
         {sidebarOpen && <Sidebar />}
         <main className="flex flex-1 flex-col overflow-hidden">
           {activeView === "board" && (
-            <div className="flex flex-1 flex-col">
+            <div className="flex min-h-0 flex-1 flex-col">
               <div className="flex items-center gap-2 border-b border-border px-4 py-2">
                 <Search size={14} className="flex-shrink-0 text-muted-foreground" />
                 <input
