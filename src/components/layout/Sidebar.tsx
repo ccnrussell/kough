@@ -28,42 +28,42 @@ export function Sidebar() {
   return (
     <>
     <div className="flex h-full w-56 flex-col border-r border-border bg-card">
-      <div className="flex items-center gap-1 px-2 pt-3 pb-2">
+      <div className="flex items-center justify-center gap-1 px-2 pt-3 pb-2">
         <button
           onClick={() => setActiveView("board")}
+          title="Board"
           className={cn(
-            "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors",
+            "rounded-md p-2 transition-colors",
             activeView === "board"
               ? "bg-accent text-accent-foreground"
               : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
           )}
         >
-          <Kanban size={14} />
-          Board
-        </button>
-        <button
-          onClick={() => setActiveView("trash")}
-          className={cn(
-            "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors",
-            activeView === "trash"
-              ? "bg-accent text-accent-foreground"
-              : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-          )}
-        >
-          <Trash2 size={14} />
-          Trash
+          <Kanban size={16} />
         </button>
         <button
           onClick={() => setActiveView("activity")}
+          title="Activity"
           className={cn(
-            "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors",
+            "rounded-md p-2 transition-colors",
             activeView === "activity"
               ? "bg-accent text-accent-foreground"
               : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
           )}
         >
-          <Clock size={14} />
-          Activity
+          <Clock size={16} />
+        </button>
+        <button
+          onClick={() => setActiveView("trash")}
+          title="Trash"
+          className={cn(
+            "rounded-md p-2 transition-colors",
+            activeView === "trash"
+              ? "bg-accent text-accent-foreground"
+              : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+          )}
+        >
+          <Trash2 size={16} />
         </button>
       </div>
 
