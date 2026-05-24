@@ -8,12 +8,14 @@ interface UIState {
   activeTaskId: string | null;
   editingColumnId: string | null;
   activeView: ViewType;
+  searchQuery: string;
 
   toggleSidebar: () => void;
   openTaskDetail: (taskId: string) => void;
   closeTaskDetail: () => void;
   setEditingColumn: (columnId: string | null) => void;
   setActiveView: (view: ViewType) => void;
+  setSearchQuery: (query: string) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -36,4 +38,7 @@ export const useUIStore = create<UIState>((set) => ({
 
   setActiveView: (view: ViewType) =>
     set({ activeView: view }),
+
+  searchQuery: "",
+  setSearchQuery: (query: string) => set({ searchQuery: query }),
 }));

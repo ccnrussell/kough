@@ -6,6 +6,7 @@ import type { Column as ColumnType } from "@/types";
 import { useBoardStore } from "@/stores/boardStore";
 import { useTaskStore } from "@/stores/taskStore";
 import { useTagStore } from "@/stores/tagStore";
+import { useUIStore } from "@/stores/uiStore";
 import { TaskCard } from "./TaskCard";
 import { AddTaskForm } from "./AddTaskForm";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -18,6 +19,7 @@ export function Column({ column }: ColumnProps) {
   const { deleteColumn, updateColumn } = useBoardStore();
   const { getTasksByColumn } = useTaskStore();
   const { taskTags, activeTagFilters } = useTagStore();
+  const { searchQuery } = useUIStore();
   const [showAddForm, setShowAddForm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(column.title);
@@ -35,6 +37,14 @@ export function Column({ column }: ColumnProps) {
       const taskTagList = taskTags[t.id] || [];
       return taskTagList.some((tag) => activeTagFilters.has(tag.id));
     });
+  }
+
+  if (searchQuery.trim()) {
+    const q = searchQuery.toLowerCase();
+    tasks = tasks.filter((t) =>
+      t.title.toLowerCase().includes(q) ||
+      (t.description_md && t.description_md.toLowerCase().includes(q))
+    );
   }
 
   const handleSaveTitle = () => {

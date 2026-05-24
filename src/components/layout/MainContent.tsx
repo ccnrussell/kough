@@ -3,6 +3,7 @@ import { useBoardStore } from "@/stores/boardStore";
 import { useTaskStore } from "@/stores/taskStore";
 import { useTagStore } from "@/stores/tagStore";
 import { useUIStore } from "@/stores/uiStore";
+import { Search, X } from "lucide-react";
 import { TitleBar } from "./TitleBar";
 import { Sidebar } from "./Sidebar";
 import { Board } from "@/components/board/Board";
@@ -15,7 +16,7 @@ export function MainContent() {
   const { activeBoardId, fetchBoards } = useBoardStore();
   const { fetchTasks } = useTaskStore();
   const { fetchTags } = useTagStore();
-  const { sidebarOpen, taskDetailOpen, activeView } = useUIStore();
+  const { sidebarOpen, taskDetailOpen, activeView, searchQuery, setSearchQuery } = useUIStore();
 
   useEffect(() => {
     fetchBoards();
@@ -35,10 +36,24 @@ export function MainContent() {
         {sidebarOpen && <Sidebar />}
         <main className="flex flex-1 flex-col overflow-hidden">
           {activeView === "board" && (
-            <>
+            <div className="flex flex-1 flex-col">
+              <div className="flex items-center gap-2 border-b border-border px-4 py-2">
+                <Search size={14} className="flex-shrink-0 text-muted-foreground" />
+                <input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search tasks..."
+                  className="w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+                />
+                {searchQuery && (
+                  <button onClick={() => setSearchQuery("")} className="text-muted-foreground hover:text-foreground">
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
               <TagFilter />
               <Board />
-            </>
+            </div>
           )}
           {activeView === "activity" && <ActivityView />}
           {activeView === "trash" && <TrashView />}
