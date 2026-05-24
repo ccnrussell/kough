@@ -25,5 +25,7 @@ pub fn init_db(app: &AppHandle) -> Result<Connection, crate::error::AppError> {
 
     run_migrations(&conn)?;
 
+    crate::db::repository::purge_old_trash(&conn)?;
+
     Ok(conn)
 }

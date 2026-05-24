@@ -98,6 +98,16 @@ pub fn run() {
             commands::activity::get_app_usage_summary,
             commands::activity::get_browser_usage_summary,
             commands::activity::get_active_tracking,
+            commands::trash::get_trash,
+            commands::trash::restore_board,
+            commands::trash::restore_column,
+            commands::trash::restore_task,
+            commands::trash::restore_tag,
+            commands::trash::purge_old_trash,
+            commands::trash::permanently_delete_board,
+            commands::trash::permanently_delete_column,
+            commands::trash::permanently_delete_task,
+            commands::trash::permanently_delete_tag,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
