@@ -6,7 +6,7 @@ use crate::models::*;
 
 pub fn get_boards(conn: &Connection) -> Result<Vec<board::Board>, AppError> {
     let mut stmt = conn
-        .prepare("SELECT id, title, created_at, updated_at FROM boards ORDER BY created_at ASC")?;
+        .prepare("SELECT id, title, created_at, updated_at FROM boards WHERE deleted_at IS NULL ORDER BY created_at ASC")?;
     let boards = stmt
         .query_map([], |row| {
             Ok(board::Board {
@@ -67,10 +67,22 @@ pub fn update_board(
 }
 
 pub fn delete_board(conn: &Connection, board_id: &str) -> Result<(), AppError> {
-    let rows = conn.execute("DELETE FROM boards WHERE id = ?1", params![board_id])?;
+    let now = chrono::Utc::now().to_rfc3339();
+    let rows = conn.execute(
+        "UPDATE boards SET deleted_at = ?1 WHERE id = ?2 AND deleted_at IS NULL",
+        params![now, board_id],
+    )?;
     if rows == 0 {
         return Err(AppError::NotFound(format!("Board {} not found", board_id)));
     }
+    conn.execute(
+        "UPDATE columns SET deleted_at = ?1 WHERE board_id = ?2 AND deleted_at IS NULL",
+        params![now, board_id],
+    )?;
+    conn.execute(
+        "UPDATE tasks SET deleted_at = ?1 WHERE column_id IN (SELECT id FROM columns WHERE board_id = ?2) AND deleted_at IS NULL",
+        params![now, board_id],
+    )?;
     Ok(())
 }
 
@@ -79,7 +91,7 @@ pub fn get_columns_by_board(
     board_id: &str,
 ) -> Result<Vec<column::Column>, AppError> {
     let mut stmt = conn.prepare(
-        "SELECT id, board_id, title, position, created_at, updated_at FROM columns WHERE board_id = ?1 ORDER BY position ASC"
+        "SELECT id, board_id, title, position, created_at, updated_at FROM columns WHERE board_id = ?1 AND deleted_at IS NULL ORDER BY position ASC"
     )?;
     let cols = stmt
         .query_map(params![board_id], |row| {
@@ -136,13 +148,21 @@ pub fn update_column(conn: &Connection, input: &column::UpdateColumnInput) -> Re
 }
 
 pub fn delete_column(conn: &Connection, column_id: &str) -> Result<(), AppError> {
-    let rows = conn.execute("DELETE FROM columns WHERE id = ?1", params![column_id])?;
+    let now = chrono::Utc::now().to_rfc3339();
+    let rows = conn.execute(
+        "UPDATE columns SET deleted_at = ?1 WHERE id = ?2 AND deleted_at IS NULL",
+        params![now, column_id],
+    )?;
     if rows == 0 {
         return Err(AppError::NotFound(format!(
             "Column {} not found",
             column_id
         )));
     }
+    conn.execute(
+        "UPDATE tasks SET deleted_at = ?1 WHERE column_id = ?2 AND deleted_at IS NULL",
+        params![now, column_id],
+    )?;
     Ok(())
 }
 
@@ -164,7 +184,7 @@ pub fn get_tasks_by_column(
     column_id: &str,
 ) -> Result<Vec<task::Task>, AppError> {
     let mut stmt = conn.prepare(
-        "SELECT id, column_id, title, description_md, position, priority, due_date, created_at, updated_at FROM tasks WHERE column_id = ?1 ORDER BY position ASC"
+        "SELECT id, column_id, title, description_md, position, priority, due_date, created_at, updated_at FROM tasks WHERE column_id = ?1 AND deleted_at IS NULL ORDER BY position ASC"
     )?;
     let tasks = stmt
         .query_map(params![column_id], |row| {
@@ -189,7 +209,7 @@ pub fn get_tasks_by_board(conn: &Connection, board_id: &str) -> Result<Vec<task:
         "SELECT t.id, t.column_id, t.title, t.description_md, t.position, t.priority, t.due_date, t.created_at, t.updated_at
          FROM tasks t
          JOIN columns c ON t.column_id = c.id
-         WHERE c.board_id = ?1
+         WHERE c.board_id = ?1 AND t.deleted_at IS NULL AND c.deleted_at IS NULL
          ORDER BY t.position ASC"
     )?;
     let tasks = stmt
@@ -320,7 +340,11 @@ pub fn reorder_task(conn: &Connection, task_id: &str, new_position: f64) -> Resu
 }
 
 pub fn delete_task(conn: &Connection, task_id: &str) -> Result<(), AppError> {
-    let rows = conn.execute("DELETE FROM tasks WHERE id = ?1", params![task_id])?;
+    let now = chrono::Utc::now().to_rfc3339();
+    let rows = conn.execute(
+        "UPDATE tasks SET deleted_at = ?1 WHERE id = ?2 AND deleted_at IS NULL",
+        params![now, task_id],
+    )?;
     if rows == 0 {
         return Err(AppError::NotFound(format!("Task {} not found", task_id)));
     }
@@ -329,7 +353,7 @@ pub fn delete_task(conn: &Connection, task_id: &str) -> Result<(), AppError> {
 
 pub fn get_tags_by_board(conn: &Connection, board_id: &str) -> Result<Vec<tag::Tag>, AppError> {
     let mut stmt = conn.prepare(
-        "SELECT id, board_id, name, color FROM tags WHERE board_id = ?1 ORDER BY name ASC",
+        "SELECT id, board_id, name, color FROM tags WHERE board_id = ?1 AND deleted_at IS NULL ORDER BY name ASC",
     )?;
     let tags = stmt
         .query_map(params![board_id], |row| {
@@ -392,10 +416,15 @@ pub fn update_tag(conn: &Connection, input: &tag::UpdateTagInput) -> Result<tag:
 }
 
 pub fn delete_tag(conn: &Connection, tag_id: &str) -> Result<(), AppError> {
-    let rows = conn.execute("DELETE FROM tags WHERE id = ?1", params![tag_id])?;
+    let now = chrono::Utc::now().to_rfc3339();
+    let rows = conn.execute(
+        "UPDATE tags SET deleted_at = ?1 WHERE id = ?2 AND deleted_at IS NULL",
+        params![now, tag_id],
+    )?;
     if rows == 0 {
         return Err(AppError::NotFound(format!("Tag {} not found", tag_id)));
     }
+    conn.execute("DELETE FROM task_tags WHERE tag_id = ?1", params![tag_id])?;
     Ok(())
 }
 
@@ -462,4 +491,117 @@ pub fn get_tasks_by_tag(conn: &Connection, tag_id: &str) -> Result<Vec<task::Tas
         })?
         .collect::<Result<Vec<_>, _>>()?;
     Ok(tasks)
+}
+
+pub fn restore_board(conn: &Connection, board_id: &str) -> Result<(), AppError> {
+    conn.execute(
+        "UPDATE boards SET deleted_at = NULL WHERE id = ?1",
+        params![board_id],
+    )?;
+    conn.execute(
+        "UPDATE columns SET deleted_at = NULL WHERE board_id = ?1",
+        params![board_id],
+    )?;
+    conn.execute(
+        "UPDATE tasks SET deleted_at = NULL WHERE column_id IN (SELECT id FROM columns WHERE board_id = ?1)",
+        params![board_id],
+    )?;
+    Ok(())
+}
+
+pub fn restore_column(conn: &Connection, column_id: &str) -> Result<(), AppError> {
+    conn.execute(
+        "UPDATE columns SET deleted_at = NULL WHERE id = ?1",
+        params![column_id],
+    )?;
+    conn.execute(
+        "UPDATE tasks SET deleted_at = NULL WHERE column_id = ?1",
+        params![column_id],
+    )?;
+    Ok(())
+}
+
+pub fn restore_task(conn: &Connection, task_id: &str) -> Result<(), AppError> {
+    conn.execute(
+        "UPDATE tasks SET deleted_at = NULL WHERE id = ?1",
+        params![task_id],
+    )?;
+    Ok(())
+}
+
+pub fn restore_tag(conn: &Connection, tag_id: &str) -> Result<(), AppError> {
+    conn.execute(
+        "UPDATE tags SET deleted_at = NULL WHERE id = ?1",
+        params![tag_id],
+    )?;
+    Ok(())
+}
+
+pub fn get_trash(conn: &Connection) -> Result<(Vec<board::Board>, Vec<column::Column>, Vec<task::Task>, Vec<tag::Tag>), AppError> {
+    let mut boards_stmt = conn.prepare(
+        "SELECT id, title, created_at, updated_at FROM boards WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC"
+    )?;
+    let boards = boards_stmt.query_map([], |row| {
+        Ok(board::Board {
+            id: row.get(0)?,
+            title: row.get(1)?,
+            created_at: row.get(2)?,
+            updated_at: row.get(3)?,
+        })
+    })?.collect::<Result<Vec<_>, _>>()?;
+
+    let mut cols_stmt = conn.prepare(
+        "SELECT id, board_id, title, position, created_at, updated_at FROM columns WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC"
+    )?;
+    let columns = cols_stmt.query_map([], |row| {
+        Ok(column::Column {
+            id: row.get(0)?,
+            board_id: row.get(1)?,
+            title: row.get(2)?,
+            position: row.get(3)?,
+            created_at: row.get(4)?,
+            updated_at: row.get(5)?,
+        })
+    })?.collect::<Result<Vec<_>, _>>()?;
+
+    let mut tasks_stmt = conn.prepare(
+        "SELECT id, column_id, title, description_md, position, priority, due_date, created_at, updated_at FROM tasks WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC"
+    )?;
+    let tasks = tasks_stmt.query_map([], |row| {
+        Ok(task::Task {
+            id: row.get(0)?,
+            column_id: row.get(1)?,
+            title: row.get(2)?,
+            description_md: row.get(3)?,
+            position: row.get(4)?,
+            priority: row.get(5)?,
+            due_date: row.get(6)?,
+            created_at: row.get(7)?,
+            updated_at: row.get(8)?,
+        })
+    })?.collect::<Result<Vec<_>, _>>()?;
+
+    let mut tags_stmt = conn.prepare(
+        "SELECT id, board_id, name, color FROM tags WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC"
+    )?;
+    let tags = tags_stmt.query_map([], |row| {
+        Ok(tag::Tag {
+            id: row.get(0)?,
+            board_id: row.get(1)?,
+            name: row.get(2)?,
+            color: row.get(3)?,
+        })
+    })?.collect::<Result<Vec<_>, _>>()?;
+
+    Ok((boards, columns, tasks, tags))
+}
+
+pub fn purge_old_trash(conn: &Connection) -> Result<(), AppError> {
+    let cutoff = chrono::Utc::now() - chrono::Duration::days(30);
+    let cutoff_str = cutoff.to_rfc3339();
+    conn.execute("DELETE FROM tags WHERE deleted_at IS NOT NULL AND deleted_at < ?1", params![cutoff_str])?;
+    conn.execute("DELETE FROM tasks WHERE deleted_at IS NOT NULL AND deleted_at < ?1", params![cutoff_str])?;
+    conn.execute("DELETE FROM columns WHERE deleted_at IS NOT NULL AND deleted_at < ?1", params![cutoff_str])?;
+    conn.execute("DELETE FROM boards WHERE deleted_at IS NOT NULL AND deleted_at < ?1", params![cutoff_str])?;
+    Ok(())
 }
