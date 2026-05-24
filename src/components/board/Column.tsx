@@ -8,6 +8,7 @@ import { useTaskStore } from "@/stores/taskStore";
 import { useTagStore } from "@/stores/tagStore";
 import { TaskCard } from "./TaskCard";
 import { AddTaskForm } from "./AddTaskForm";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface ColumnProps {
   column: ColumnType;
@@ -21,6 +22,7 @@ export function Column({ column }: ColumnProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(column.title);
   const [showMenu, setShowMenu] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const { setNodeRef, isOver } = useDroppable({
     id: column.id,
@@ -89,7 +91,7 @@ export function Column({ column }: ColumnProps) {
                 </button>
                 <button
                   onClick={() => {
-                    deleteColumn(column.id);
+                    setShowDeleteConfirm(true);
                     setShowMenu(false);
                   }}
                   className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm text-destructive hover:bg-accent transition-colors"
@@ -134,6 +136,15 @@ export function Column({ column }: ColumnProps) {
           </button>
         )}
       </div>
+
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        title="Delete Column?"
+        description={`This will move "${column.title}" and all its tasks to trash. You can restore them within 30 days.`}
+        confirmLabel="Delete Column"
+        onConfirm={() => deleteColumn(column.id)}
+      />
     </div>
   );
 }
