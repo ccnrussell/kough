@@ -98,6 +98,7 @@ pub fn run() {
             commands::activity::get_app_usage_summary,
             commands::activity::get_browser_usage_summary,
             commands::activity::get_active_tracking,
+            commands::activity::get_app_icon,
             commands::trash::get_trash,
             commands::trash::restore_board,
             commands::trash::restore_column,

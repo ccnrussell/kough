@@ -46,3 +46,59 @@ pub fn get_active_tracking() -> Result<ActiveTracking, AppError> {
         }),
     }
 }
+
+#[cfg(windows)]
+#[tauri::command]
+pub fn get_app_icon(app_name: String) -> Result<String, AppError> {
+    use windows::Win32::System::Threading::{OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_NAME_WIN32, QueryFullProcessImageNameW};
+    use windows::Win32::Foundation::{CloseHandle, MAX_PATH};
+    use windows::core::PWSTR;
+    use windows::Win32::System::ProcessStatus::K32EnumProcesses;
+
+    let mut pids = [0u32; 1024];
+    let mut needed = 0u32;
+    let result = unsafe { K32EnumProcesses(pids.as_mut_ptr(), (pids.len() * 4) as u32, &mut needed) };
+    if !result.as_bool() {
+        return Ok(String::new());
+    }
+
+    let count = (needed / 4) as usize;
+    let target = app_name.to_lowercase().trim_end_matches(".exe").to_string();
+
+    for i in 0..count {
+        let pid = pids[i];
+        if pid == 0 { continue; }
+
+        let handle = unsafe { OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid) };
+        if let Ok(handle) = handle {
+            let mut lpdwsize: u32 = MAX_PATH;
+            let mut lpexename_raw: Vec<u16> = vec![0; MAX_PATH as usize];
+            let lpexename = PWSTR::from_raw(lpexename_raw.as_mut_ptr());
+
+            let success = unsafe {
+                QueryFullProcessImageNameW(handle, PROCESS_NAME_WIN32, lpexename, &mut lpdwsize).is_ok()
+            };
+
+            if success {
+                let path = unsafe { lpexename.to_string().unwrap_or_default() };
+                let name = std::path::Path::new(&path)
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("")
+                    .to_lowercase();
+
+                if name == target {
+                    unsafe { let _ = CloseHandle(handle); }
+                    if let Some(icon) = crate::tracker::icon::extract_icon_from_exe(&path) {
+                        return Ok(icon.base64);
+                    }
+                    return Ok(String::new());
+                }
+            }
+
+            unsafe { let _ = CloseHandle(handle); }
+        }
+    }
+
+    Ok(String::new())
+}

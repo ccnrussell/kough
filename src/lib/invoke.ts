@@ -49,6 +49,7 @@ export const api = {
     browserSummary: (startDate: string, endDate: string) =>
       cmd<BrowserUsageSummary[]>("get_browser_usage_summary", { startDate, endDate }),
     activeTracking: () => cmd<ActiveTracking>("get_active_tracking"),
+    getAppIcon: (appName: string) => cmd<string>("get_app_icon", { appName }),
   },
   trash: {
     get: () => cmd<TrashItem>("get_trash"),
