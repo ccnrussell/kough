@@ -101,6 +101,13 @@ CREATE INDEX IF NOT EXISTS idx_columns_deleted ON columns(deleted_at);
 CREATE INDEX IF NOT EXISTS idx_tasks_deleted ON tasks(deleted_at);
 CREATE INDEX IF NOT EXISTS idx_tags_deleted ON tags(deleted_at);
 ",
+    "
+ALTER TABLE app_usage ADD COLUMN last_seen TEXT;
+ALTER TABLE browser_usage ADD COLUMN last_seen TEXT;
+
+UPDATE app_usage SET last_seen = date || 'T00:00:00Z' WHERE last_seen IS NULL;
+UPDATE browser_usage SET last_seen = date || 'T00:00:00Z' WHERE last_seen IS NULL;
+",
 ];
 
 pub fn run_migrations(conn: &Connection) -> Result<(), AppError> {

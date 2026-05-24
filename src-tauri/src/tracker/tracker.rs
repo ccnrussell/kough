@@ -1,5 +1,5 @@
 use rusqlite::Connection;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
@@ -8,6 +8,7 @@ use super::windows;
 use crate::db::activity_repository;
 
 const FLUSH_INTERVAL_SECS: i64 = 10;
+static FLUSH_COUNT: AtomicUsize = AtomicUsize::new(0);
 
 pub fn run(db_conn: Arc<Mutex<Connection>>, running: &AtomicBool) {
     let current_state = super::CURRENT.get_or_init(|| Mutex::new(None));
@@ -70,6 +71,12 @@ fn flush_accumulated(
             let _ = activity_repository::upsert_app_usage(&conn, app_name, &date, secs);
             if let Some(ref dom) = domain {
                 let _ = activity_repository::upsert_browser_usage(&conn, dom, &date, secs);
+            }
+
+            // Run cleanup every ~100 flushes (roughly every ~16 minutes of active use)
+            let count = FLUSH_COUNT.fetch_add(1, Ordering::Relaxed);
+            if count % 100 == 0 {
+                let _ = activity_repository::cleanup_old_activity(&conn);
             }
         }
     }
