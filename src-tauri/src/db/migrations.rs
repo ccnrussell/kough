@@ -90,6 +90,17 @@ GROUP BY app_name, date(started_at);
 
 DROP TABLE IF EXISTS activity_sessions;
 ",
+    "
+ALTER TABLE boards ADD COLUMN deleted_at TEXT;
+ALTER TABLE columns ADD COLUMN deleted_at TEXT;
+ALTER TABLE tasks ADD COLUMN deleted_at TEXT;
+ALTER TABLE tags ADD COLUMN deleted_at TEXT;
+
+CREATE INDEX IF NOT EXISTS idx_boards_deleted ON boards(deleted_at);
+CREATE INDEX IF NOT EXISTS idx_columns_deleted ON columns(deleted_at);
+CREATE INDEX IF NOT EXISTS idx_tasks_deleted ON tasks(deleted_at);
+CREATE INDEX IF NOT EXISTS idx_tags_deleted ON tags(deleted_at);
+",
 ];
 
 pub fn run_migrations(conn: &Connection) -> Result<(), AppError> {
