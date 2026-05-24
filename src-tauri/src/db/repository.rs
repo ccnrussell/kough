@@ -537,7 +537,7 @@ pub fn restore_tag(conn: &Connection, tag_id: &str) -> Result<(), AppError> {
     Ok(())
 }
 
-pub fn get_trash(conn: &Connection) -> Result<(Vec<board::Board>, Vec<column::Column>, Vec<task::Task>, Vec<tag::Tag>), AppError> {
+pub fn get_trash(conn: &Connection) -> Result<crate::models::trash::TrashData, AppError> {
     let mut boards_stmt = conn.prepare(
         "SELECT id, title, created_at, updated_at FROM boards WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC"
     )?;
@@ -593,7 +593,7 @@ pub fn get_trash(conn: &Connection) -> Result<(Vec<board::Board>, Vec<column::Co
         })
     })?.collect::<Result<Vec<_>, _>>()?;
 
-    Ok((boards, columns, tasks, tags))
+    Ok(crate::models::trash::TrashData { boards, columns, tasks, tags })
 }
 
 pub fn purge_old_trash(conn: &Connection) -> Result<(), AppError> {

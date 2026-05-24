@@ -3,7 +3,7 @@ use rusqlite::params;
 
 use crate::db::{self, DbState};
 use crate::error::AppError;
-use crate::models::{board::Board, column::Column, task::Task, tag::Tag};
+use crate::models::trash::TrashData;
 
 macro_rules! lock_conn {
     ($db:expr) => {
@@ -16,7 +16,7 @@ macro_rules! lock_conn {
 #[tauri::command]
 pub fn get_trash(
     db: State<'_, DbState>,
-) -> Result<(Vec<Board>, Vec<Column>, Vec<Task>, Vec<Tag>), AppError> {
+) -> Result<TrashData, AppError> {
     let conn = lock_conn!(db);
     db::repository::get_trash(&conn)
 }
