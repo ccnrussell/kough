@@ -3,6 +3,7 @@ import { Plus, Trash2, Kanban, Clock } from "lucide-react";
 import { useBoardStore } from "@/stores/boardStore";
 import { useUIStore } from "@/stores/uiStore";
 import { cn } from "@/lib/utils";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 export function Sidebar() {
   const { boards, activeBoardId, createBoard, setActiveBoard, deleteBoard } =
@@ -10,6 +11,10 @@ export function Sidebar() {
   const { activeView, setActiveView } = useUIStore();
   const [newTitle, setNewTitle] = useState("");
   const [showInput, setShowInput] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<{ open: boolean; boardId: string | null }>({
+    open: false,
+    boardId: null,
+  });
 
   const handleCreate = async () => {
     const trimmed = newTitle.trim();
@@ -21,6 +26,7 @@ export function Sidebar() {
   };
 
   return (
+    <>
     <div className="flex h-full w-56 flex-col border-r border-border bg-card">
       <div className="flex items-center gap-1 px-2 pt-3 pb-2">
         <button
@@ -67,7 +73,7 @@ export function Sidebar() {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    deleteBoard(board.id);
+                    setConfirmDelete({ open: true, boardId: board.id });
                   }}
                   className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:text-destructive"
                 >
@@ -108,5 +114,18 @@ export function Sidebar() {
         </>
       )}
     </div>
+      <ConfirmDialog
+        open={confirmDelete.open}
+        onOpenChange={(open) => setConfirmDelete({ open, boardId: open ? confirmDelete.boardId : null })}
+        title="Delete Board?"
+        description={`This will move "${boards.find((b) => b.id === confirmDelete.boardId)?.title || ""}" and all its contents to trash. You can restore it within 30 days.`}
+        confirmLabel="Delete Board"
+        onConfirm={() => {
+          if (confirmDelete.boardId) {
+            deleteBoard(confirmDelete.boardId);
+          }
+        }}
+      />
+    </>
   );
 }
