@@ -1,3 +1,4 @@
+pub mod apply;
 pub mod changes;
 pub mod client;
 
