@@ -2,6 +2,7 @@ mod commands;
 mod db;
 mod error;
 mod models;
+pub mod sync;
 mod tracker;
 
 use db::DbState;
