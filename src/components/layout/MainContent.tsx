@@ -1,16 +1,20 @@
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { useBoardStore } from "@/stores/boardStore";
 import { useTaskStore } from "@/stores/taskStore";
 import { useTagStore } from "@/stores/tagStore";
 import { useUIStore } from "@/stores/uiStore";
+import { useActivityStore } from "@/stores/activityStore";
 import { Search, X } from "lucide-react";
 import { TitleBar } from "./TitleBar";
 import { Sidebar } from "./Sidebar";
 import { Board } from "@/components/board/Board";
 import { ActivityView } from "@/components/activity/ActivityView";
 import { TrashView } from "@/components/layout/TrashView";
-import { TaskDetailModal } from "@/components/task/TaskDetailModal";
 import { TagFilter } from "@/components/tags/TagFilter";
+
+const TaskDetailModal = lazy(() =>
+  import("@/components/task/TaskDetailModal").then((m) => ({ default: m.TaskDetailModal }))
+);
 
 export function MainContent() {
   const { activeBoardId, fetchBoards } = useBoardStore();
@@ -28,6 +32,12 @@ export function MainContent() {
       fetchTags(activeBoardId);
     }
   }, [activeBoardId, fetchTasks, fetchTags]);
+
+  useEffect(() => {
+    if (activeView !== "activity") {
+      useActivityStore.getState().clearIconCache();
+    }
+  }, [activeView]);
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
@@ -59,7 +69,11 @@ export function MainContent() {
           {activeView === "trash" && <TrashView />}
         </main>
       </div>
-      {taskDetailOpen && <TaskDetailModal />}
+      {taskDetailOpen && (
+        <Suspense>
+          <TaskDetailModal />
+        </Suspense>
+      )}
     </div>
   );
 }

@@ -16,6 +16,7 @@ interface ActivityState {
   fetchActiveTracking: () => Promise<void>;
   setDateRange: (start: string, end: string) => void;
   fetchAppIcon: (appName: string) => Promise<void>;
+  clearIconCache: () => void;
 }
 
 function today(): string {
@@ -27,6 +28,8 @@ function tomorrow(): string {
   d.setDate(d.getDate() + 1);
   return d.toISOString().split("T")[0];
 }
+
+const inflightIcons = new Map<string, Promise<void>>();
 
 export const useActivityStore = create<ActivityState>((set, get) => ({
   appSummary: [],
@@ -62,9 +65,20 @@ export const useActivityStore = create<ActivityState>((set, get) => ({
   fetchAppIcon: async (appName: string) => {
     const { iconCache } = get();
     if (iconCache[appName]) return;
-    const iconData = await api.activity.getAppIcon(appName);
-    if (iconData) {
-      set({ iconCache: { ...iconCache, [appName]: iconData } });
-    }
+    if (inflightIcons.has(appName)) return inflightIcons.get(appName);
+    const p = api.activity.getAppIcon(appName).then((iconData) => {
+      if (iconData) {
+        const { iconCache } = get();
+        iconCache[appName] = iconData;
+        set({ iconCache: { ...iconCache } });
+      }
+    }).finally(() => inflightIcons.delete(appName));
+    inflightIcons.set(appName, p);
+    return p;
+  },
+
+  clearIconCache: () => {
+    inflightIcons.clear();
+    set({ iconCache: {} });
   },
 }));

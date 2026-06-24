@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { MoreHorizontal, Plus, Trash2, Pencil } from "lucide-react";
@@ -17,9 +17,10 @@ interface ColumnProps {
 
 export function Column({ column }: ColumnProps) {
   const { deleteColumn, updateColumn } = useBoardStore();
-  const { getTasksByColumn } = useTaskStore();
-  const { taskTags, activeTagFilters } = useTagStore();
-  const { searchQuery } = useUIStore();
+  const getTasksByColumn = useTaskStore((s) => s.getTasksByColumn);
+  const taskTags = useTagStore((s) => s.taskTags);
+  const activeTagFilters = useTagStore((s) => s.activeTagFilters);
+  const searchQuery = useUIStore((s) => s.searchQuery);
   const [showAddForm, setShowAddForm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(column.title);
@@ -30,22 +31,23 @@ export function Column({ column }: ColumnProps) {
     id: column.id,
   });
 
-  let tasks = getTasksByColumn(column.id);
-
-  if (activeTagFilters.size > 0) {
-    tasks = tasks.filter((t) => {
-      const taskTagList = taskTags[t.id] || [];
-      return taskTagList.some((tag) => activeTagFilters.has(tag.id));
-    });
-  }
-
-  if (searchQuery.trim()) {
-    const q = searchQuery.toLowerCase();
-    tasks = tasks.filter((t) =>
-      t.title.toLowerCase().includes(q) ||
-      (t.description_md && t.description_md.toLowerCase().includes(q))
-    );
-  }
+  const tasks = useMemo(() => {
+    let result = getTasksByColumn(column.id);
+    if (activeTagFilters.size > 0) {
+      result = result.filter((t) => {
+        const taskTagList = taskTags[t.id] || [];
+        return taskTagList.some((tag) => activeTagFilters.has(tag.id));
+      });
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter((t) =>
+        t.title.toLowerCase().includes(q) ||
+        (t.description_md && t.description_md.toLowerCase().includes(q))
+      );
+    }
+    return result;
+  }, [column.id, activeTagFilters, taskTags, searchQuery, getTasksByColumn]);
 
   const handleSaveTitle = () => {
     const trimmed = editTitle.trim();
