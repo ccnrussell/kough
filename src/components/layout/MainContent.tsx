@@ -4,12 +4,15 @@ import { useTaskStore } from "@/stores/taskStore";
 import { useTagStore } from "@/stores/tagStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useActivityStore } from "@/stores/activityStore";
+import { isMobile } from "@/lib/platform";
+import { useSyncStore } from "@/stores/syncStore";
 import { Search, X } from "lucide-react";
 import { TitleBar } from "./TitleBar";
 import { Sidebar } from "./Sidebar";
 import { Board } from "@/components/board/Board";
 import { ActivityView } from "@/components/activity/ActivityView";
 import { TrashView } from "@/components/layout/TrashView";
+import { SyncSettings } from "@/components/settings/SyncSettings";
 import { TagFilter } from "@/components/tags/TagFilter";
 
 const TaskDetailModal = lazy(() =>
@@ -39,6 +42,14 @@ export function MainContent() {
     }
   }, [activeView]);
 
+  const { fetchSettings, runSync } = useSyncStore();
+
+  useEffect(() => {
+    fetchSettings().then(() => {
+      runSync();
+    });
+  }, [fetchSettings, runSync]);
+
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
       <TitleBar />
@@ -65,8 +76,9 @@ export function MainContent() {
               <Board />
             </div>
           )}
-          {activeView === "activity" && <ActivityView />}
+          {activeView === "activity" && !isMobile() && <ActivityView />}
           {activeView === "trash" && <TrashView />}
+          {activeView === "settings" && <SyncSettings />}
         </main>
       </div>
       {taskDetailOpen && (

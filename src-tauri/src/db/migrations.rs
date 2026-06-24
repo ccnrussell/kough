@@ -119,6 +119,16 @@ CREATE TABLE IF NOT EXISTS app_icons (
     icon_data TEXT NOT NULL
 );
 ",
+    "
+CREATE TABLE IF NOT EXISTS sync_meta (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
+",
+    "
+ALTER TABLE tags ADD COLUMN updated_at TEXT;
+UPDATE tags SET updated_at = datetime('now');
+",
 ];
 
 fn column_exists(conn: &Connection, table: &str, column: &str) -> Result<bool, AppError> {

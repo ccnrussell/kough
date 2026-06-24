@@ -1,14 +1,16 @@
 # AGENTS.md — Kough
 
-Kanban-style desktop app built with **Tauri v2** (Rust backend + React frontend).
+Cross-platform kanban app built with **Tauri v2** (Rust backend + React frontend). Desktop (Windows) + Android.
 
-**Roadmap**: Kough will become **peer-to-peer** — the ultimate kanban app that needs no server. Boards sync directly between devices.
+**Roadmap**: Sync is implemented via Cloudflare D1. Android build supported. See "Sync" and "Android" sections below.
 
 ## Commands
 
 - `npm run tauri dev` — full desktop app with hot reload (not just `npm run dev`, which only starts Vite)
 - `npm run build` — frontend only (`tsc && vite build`)
 - `npm run tauri build` — production desktop bundle (frontend + Rust)
+- `npx tauri android init` — initialize Android project (requires Android Studio + NDK 26+)
+- `npx tauri android build --apk -t aarch64` — build signed Android APK
 - No test runner, linter, or formatter is configured
 
 ## Architecture
@@ -19,18 +21,22 @@ src/                  # React frontend (Vite entry at src/main.tsx)
     activity/         # ActivityView, ActivityChart, BrowserDetail, CalendarPicker, SummaryCards
     board/            # TaskCard, Column, Board
     layout/           # Sidebar, MainContent, TitleBar
+    settings/         # SyncSettings
     tags/             # Tag management
     task/             # TaskDetailModal, DescriptionEditor (CodeMirror 6)
     ui/               # shadcn/ui primitives
-  stores/             # Zustand stores (boardStore, taskStore, tagStore, uiStore, activityStore)
+  stores/             # Zustand stores (boardStore, taskStore, tagStore, uiStore, activityStore, syncStore)
   lib/invoke.ts       # typed wrapper around Tauri invoke — all backend calls go here
+  lib/platform.ts     # isMobile() for mobile-specific UI
   types/index.ts      # shared TS types mirroring Rust models
 src-tauri/            # Rust backend
-  src/commands/       # Tauri command handlers (board, column, task, tag, activity)
+  src/commands/       # Tauri command handlers (board, column, task, tag, activity, sync)
   src/db/             # SQLite init, migrations, repository layer
   src/models/         # Rust structs (Board, Column, Task, Tag, activity models)
-  src/tracker/        # Background activity tracker (tracker.rs, windows.rs)
+  src/sync/           # sync module (client.rs, changes.rs, apply.rs)
+  src/tracker/        # Background activity tracker (tracker.rs, windows.rs, icon.rs)
   src/error.rs        # AppError enum (thiserror + manual Serialize impl)
+sync-worker/          # Cloudflare Worker sync API (deploy to Cloudflare free tier)
 ```
 
 Frontend talks to Rust exclusively through `api.*` in `src/lib/invoke.ts`.
@@ -45,6 +51,8 @@ Frontend talks to Rust exclusively through `api.*` in `src/lib/invoke.ts`.
 - **Strict TS**: `noUnusedLocals` and `noUnusedParameters` are enabled — dead imports/params will fail `tsc`
 - **State**: Zustand stores in `src/stores/`; each store calls `api.*` and manages local cache
 - **No comments**: the entire codebase has zero comments — do not add any
+- **Platform gating**: Activity tracking is `#[cfg(windows)]` only. Tray/window close is `#[cfg(desktop)]`. Non-Windows stubs for platform-specific commands
+- **Mobile UI**: Sidebar is a drawer overlay on mobile (slide-in with backdrop). TitleBar shows hamburger icon, hides window controls
 
 ## Backend gotchas
 
@@ -54,10 +62,11 @@ Frontend talks to Rust exclusively through `api.*` in `src/lib/invoke.ts`.
 - **Error handling**: `AppError` has a manual `Serialize` impl — adding variants requires updating the match in `error.rs`
 - **Lib name**: Cargo lib is named `kough_lib` (not `kough`) to avoid Windows naming conflict; don't rename it
 - `src-tauri/src/main.rs` has `windows_subsystem = "windows"` for release builds — do not remove
+- **Sync**: Cloudflare D1 + Worker. `tags` table has `updated_at` (migration 7). `task_tags` has no timestamps — full table sync. Non-Windows stub for `get_app_icon` in `commands/activity.rs`
 
-## Activity tracking (Screen Time)
+## Activity tracking (Screen Time) — Windows only
 
-Background tracker polls the foreground window every 1 second and aggregates usage per day into two tables: `app_usage` (app_name, date, total_secs) and `browser_usage` (domain, date, total_secs). Flushes to DB every 10 seconds.
+Background tracker polls the foreground window every 1 second and aggregates usage per day into two tables: `app_usage` (app_name, date, total_secs) and `browser_usage` (domain, date, total_secs). Flushes to DB every 10 seconds. Entire module is `#[cfg(windows)]` — excluded on Android.
 
 ### Browser URL extraction (`src-tauri/src/tracker/windows.rs`)
 
@@ -105,4 +114,57 @@ Task descriptions use **CodeMirror 6** with an Obsidian-style **live preview** m
 
 - `codemirror` (bundles `@codemirror/state`, `@codemirror/view`, `@codemirror/commands`, `@codemirror/language`)
 - `@codemirror/lang-markdown` (lezer-based markdown parser)
-- `@codemirror/language-data` (language modes for fenced code blocks)
+
+## Sync (Cloudflare D1)
+
+Cross-device sync via Cloudflare D1 + Worker. Free tier (5M reads/day, 100K writes/day, 5GB storage).
+
+### Architecture
+
+- **`sync-worker/`** — Cloudflare Worker (REST API). Validates `X-Sync-Key` header, upserts to D1, returns changes since last sync
+- **`src-tauri/src/sync/`** — Rust sync module: `client.rs` (HTTP via reqwest), `changes.rs` (collect local changes), `apply.rs` (apply remote changes)
+- **`src-tauri/src/commands/sync.rs`** — Tauri commands: `get_sync_settings`, `save_sync_settings`, `run_sync`
+- **`src/stores/syncStore.ts`** — Zustand store, `triggerSync()` debounced helper
+
+### Protocol
+
+1. Collect local changes where `updated_at > last_sync`
+2. POST to Worker with `{ last_sync, changes }`
+3. Worker upserts to D1 (last-write-wins by `updated_at`)
+4. Worker returns all records modified since `last_sync`
+5. Apply remote changes to local SQLite
+6. Update `last_sync` to server time
+
+`task_tags` has no `updated_at` — always synced as full table. `sync_meta` table stores config (key/value).
+
+### Setup
+
+1. `cd sync-worker && npx wrangler d1 create kough-sync`
+2. Update `wrangler.toml` with the returned `database_id`
+3. `npx wrangler d1 execute kough-sync --remote --file schema.sql`
+4. `npx wrangler secret put SYNC_KEY`
+5. `npx wrangler deploy`
+6. In Kough: Settings → enter Worker URL + sync key → Enable Sync
+
+## Android
+
+Tauri v2 mobile support. Kanban features are fully cross-platform. Activity tracking is excluded.
+
+### Build
+
+1. Android Studio with NDK 26+ (install via SDK Manager)
+2. `npx tauri android init` (one-time)
+3. `npx tauri android build --apk -t aarch64`
+
+### Platform detection
+
+- **`src/lib/platform.ts`** — `isMobile()` checks user agent for Android/iOS
+- Activity view hidden on mobile (`{activeView === "activity" && !isMobile() && <ActivityView />}`)
+- Window controls (min/max/close) hidden on mobile — handled by system
+
+### Desktop-only code
+
+- `src-tauri/src/tracker/` — `#[cfg(windows)]`
+- `src-tauri/src/commands/activity.rs` — `get_app_icon` has `#[cfg(windows)]` impl + `#[cfg(not(windows))]` stub returning empty string
+- Tray icon and close-to-tray: `#[cfg(desktop)]` in `lib.rs`
+- `tauri` crate `tray-icon` feature: conditional in `Cargo.toml` via `[target.'cfg(not(target_os = "android"))'.dependencies]`

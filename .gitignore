@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Android generated files (auto-created by cargo tauri android init)
+src-tauri/gen/
+
+# Keystore files (contain signing keys)
+*.jks
+*.keystore

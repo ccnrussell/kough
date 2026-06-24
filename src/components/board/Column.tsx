@@ -17,6 +17,7 @@ interface ColumnProps {
 
 export function Column({ column }: ColumnProps) {
   const { deleteColumn, updateColumn } = useBoardStore();
+  const allTasks = useTaskStore((s) => s.tasks);
   const getTasksByColumn = useTaskStore((s) => s.getTasksByColumn);
   const taskTags = useTagStore((s) => s.taskTags);
   const activeTagFilters = useTagStore((s) => s.activeTagFilters);
@@ -47,7 +48,7 @@ export function Column({ column }: ColumnProps) {
       );
     }
     return result;
-  }, [column.id, activeTagFilters, taskTags, searchQuery, getTasksByColumn]);
+  }, [column.id, allTasks, activeTagFilters, taskTags, searchQuery, getTasksByColumn]);
 
   const handleSaveTitle = () => {
     const trimmed = editTitle.trim();

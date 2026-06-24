@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-type ViewType = "board" | "activity" | "trash";
+type ViewType = "board" | "activity" | "trash" | "settings";
 
 interface UIState {
   sidebarOpen: boolean;
@@ -11,6 +11,7 @@ interface UIState {
   searchQuery: string;
 
   toggleSidebar: () => void;
+  setSidebarOpen: (open: boolean) => void;
   openTaskDetail: (taskId: string) => void;
   closeTaskDetail: () => void;
   setEditingColumn: (columnId: string | null) => void;
@@ -26,6 +27,7 @@ export const useUIStore = create<UIState>((set) => ({
   activeView: "board",
 
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
+  setSidebarOpen: (open: boolean) => set({ sidebarOpen: open }),
 
   openTaskDetail: (taskId: string) =>
     set({ taskDetailOpen: true, activeTaskId: taskId }),

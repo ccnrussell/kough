@@ -2,14 +2,18 @@ mod commands;
 mod db;
 mod error;
 mod models;
+pub mod sync;
 mod tracker;
 
 use db::DbState;
 use std::sync::Arc;
 use std::sync::Mutex;
-use tauri::menu::{MenuBuilder, MenuItemBuilder};
-use tauri::tray::TrayIconBuilder;
 use tauri::Manager;
+#[cfg(desktop)]
+use tauri::menu::{MenuBuilder, MenuItemBuilder};
+#[cfg(desktop)]
+use tauri::tray::TrayIconBuilder;
+#[cfg(desktop)]
 use tauri::WindowEvent;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -36,37 +40,40 @@ pub fn run() {
 
             let _tracker_handle = tracker::start_tracker(tracker_conn);
 
-            let show_item = MenuItemBuilder::with_id("show", "Show Kough").build(app)?;
-            let quit_item = MenuItemBuilder::with_id("quit", "Quit").build(app)?;
-            let menu = MenuBuilder::new(app)
-                .items(&[&show_item, &quit_item])
-                .build()?;
+            #[cfg(desktop)]
+            {
+                let show_item = MenuItemBuilder::with_id("show", "Show Kough").build(app)?;
+                let quit_item = MenuItemBuilder::with_id("quit", "Quit").build(app)?;
+                let menu = MenuBuilder::new(app)
+                    .items(&[&show_item, &quit_item])
+                    .build()?;
 
-            let _tray = TrayIconBuilder::new()
-                .icon(app.default_window_icon().unwrap().clone())
-                .menu(&menu)
-                .on_menu_event(move |app, event| match event.id().as_ref() {
-                    "show" => {
-                        if let Some(window) = app.get_webview_window("main") {
-                            let _ = window.show();
-                            let _ = window.set_focus();
+                let _tray = TrayIconBuilder::new()
+                    .icon(app.default_window_icon().unwrap().clone())
+                    .menu(&menu)
+                    .on_menu_event(move |app, event| match event.id().as_ref() {
+                        "show" => {
+                            if let Some(window) = app.get_webview_window("main") {
+                                let _ = window.show();
+                                let _ = window.set_focus();
+                            }
                         }
-                    }
-                    "quit" => {
-                        app.exit(0);
-                    }
-                    _ => {}
-                })
-                .build(app)?;
+                        "quit" => {
+                            app.exit(0);
+                        }
+                        _ => {}
+                    })
+                    .build(app)?;
 
-            if let Some(window) = app.get_webview_window("main") {
-                let win = window.clone();
-                window.on_window_event(move |event| {
-                    if let WindowEvent::CloseRequested { api, .. } = event {
-                        api.prevent_close();
-                        let _ = win.hide();
-                    }
-                });
+                if let Some(window) = app.get_webview_window("main") {
+                    let win = window.clone();
+                    window.on_window_event(move |event| {
+                        if let WindowEvent::CloseRequested { api, .. } = event {
+                            api.prevent_close();
+                            let _ = win.hide();
+                        }
+                    });
+                }
             }
 
             Ok(())
@@ -109,6 +116,9 @@ pub fn run() {
             commands::trash::permanently_delete_column,
             commands::trash::permanently_delete_task,
             commands::trash::permanently_delete_tag,
+            commands::sync::get_sync_settings,
+            commands::sync::save_sync_settings,
+            commands::sync::run_sync,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
