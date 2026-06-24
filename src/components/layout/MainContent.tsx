@@ -4,6 +4,7 @@ import { useTaskStore } from "@/stores/taskStore";
 import { useTagStore } from "@/stores/tagStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useActivityStore } from "@/stores/activityStore";
+import { isMobile } from "@/lib/platform";
 import { useSyncStore } from "@/stores/syncStore";
 import { Search, X } from "lucide-react";
 import { TitleBar } from "./TitleBar";
@@ -75,7 +76,7 @@ export function MainContent() {
               <Board />
             </div>
           )}
-          {activeView === "activity" && <ActivityView />}
+          {activeView === "activity" && !isMobile() && <ActivityView />}
           {activeView === "trash" && <TrashView />}
           {activeView === "settings" && <SyncSettings />}
         </main>

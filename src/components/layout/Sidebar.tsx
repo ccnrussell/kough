@@ -3,6 +3,7 @@ import { Plus, Trash2, Kanban, Clock, Settings } from "lucide-react";
 import { useBoardStore } from "@/stores/boardStore";
 import { useUIStore } from "@/stores/uiStore";
 import { cn } from "@/lib/utils";
+import { isMobile } from "@/lib/platform";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 export function Sidebar() {
@@ -41,6 +42,7 @@ export function Sidebar() {
         >
           <Kanban size={16} />
         </button>
+        {!isMobile() && (
         <button
           onClick={() => setActiveView("activity")}
           title="Activity"
@@ -53,6 +55,7 @@ export function Sidebar() {
         >
           <Clock size={16} />
         </button>
+        )}
         <button
           onClick={() => setActiveView("trash")}
           title="Trash"
