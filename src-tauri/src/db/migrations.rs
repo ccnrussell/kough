@@ -119,6 +119,12 @@ CREATE TABLE IF NOT EXISTS app_icons (
     icon_data TEXT NOT NULL
 );
 ",
+    "
+CREATE TABLE IF NOT EXISTS sync_meta (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
+",
 ];
 
 fn column_exists(conn: &Connection, table: &str, column: &str) -> Result<bool, AppError> {
