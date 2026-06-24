@@ -10,6 +10,7 @@ import { Sidebar } from "./Sidebar";
 import { Board } from "@/components/board/Board";
 import { ActivityView } from "@/components/activity/ActivityView";
 import { TrashView } from "@/components/layout/TrashView";
+import { SyncSettings } from "@/components/settings/SyncSettings";
 import { TagFilter } from "@/components/tags/TagFilter";
 
 const TaskDetailModal = lazy(() =>
@@ -67,6 +68,7 @@ export function MainContent() {
           )}
           {activeView === "activity" && <ActivityView />}
           {activeView === "trash" && <TrashView />}
+          {activeView === "settings" && <SyncSettings />}
         </main>
       </div>
       {taskDetailOpen && (

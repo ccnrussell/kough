@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash2, Kanban, Clock } from "lucide-react";
+import { Plus, Trash2, Kanban, Clock, Settings } from "lucide-react";
 import { useBoardStore } from "@/stores/boardStore";
 import { useUIStore } from "@/stores/uiStore";
 import { cn } from "@/lib/utils";
@@ -64,6 +64,18 @@ export function Sidebar() {
           )}
         >
           <Trash2 size={16} />
+        </button>
+        <button
+          onClick={() => setActiveView("settings")}
+          title="Settings"
+          className={cn(
+            "rounded-md p-2 transition-colors",
+            activeView === "settings"
+              ? "bg-accent text-accent-foreground"
+              : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+          )}
+        >
+          <Settings size={16} />
         </button>
       </div>
 
