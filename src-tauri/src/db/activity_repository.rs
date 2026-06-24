@@ -42,6 +42,11 @@ pub fn cleanup_old_activity(conn: &Connection) -> Result<(), AppError> {
         params![cutoff_str],
     )?;
 
+    conn.execute(
+        "DELETE FROM app_icons WHERE app_name NOT IN (SELECT DISTINCT app_name FROM app_usage)",
+        [],
+    )?;
+
     Ok(())
 }
 

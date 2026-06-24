@@ -10,8 +10,6 @@ use windows::Win32::UI::WindowsAndMessaging::{DestroyIcon, GetIconInfo, HICON, I
 
 pub struct IconData {
     pub base64: String,
-    pub width: u32,
-    pub height: u32,
 }
 
 pub fn extract_icon_from_exe(exe_path: &str) -> Option<IconData> {
@@ -127,8 +125,6 @@ pub fn extract_icon_from_exe(exe_path: &str) -> Option<IconData> {
         let base64_str = BASE64_STANDARD.encode(&png_data);
         result = Some(IconData {
             base64: format!("data:image/png;base64,{base64_str}"),
-            width: cbitmap.bmWidth as u32,
-            height: cbitmap.bmHeight as u32,
         });
     }
 

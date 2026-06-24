@@ -28,4 +28,15 @@ export default defineConfig(async () => ({
       ignored: ["**/src-tauri/**"],
     },
   },
+  build: {
+    target: "esnext",
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          codemirror: ["codemirror", "@codemirror/lang-markdown", "@codemirror/view", "@codemirror/state"],
+          dnd: ["@dnd-kit/core", "@dnd-kit/sortable"],
+        },
+      },
+    },
+  },
 }));

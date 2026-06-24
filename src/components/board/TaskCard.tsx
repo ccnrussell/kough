@@ -1,11 +1,10 @@
 import { useSortable, defaultAnimateLayoutChanges } from "@dnd-kit/sortable";
 import type { AnimateLayoutChanges } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import type { Task } from "@/types";
 import { PRIORITY_CONFIG } from "@/types";
 import { useUIStore } from "@/stores/uiStore";
 import { useTagStore } from "@/stores/tagStore";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { TagBadge } from "@/components/tags/TagBadge";
 
 interface TaskCardProps {
@@ -19,7 +18,9 @@ const animateLayoutChanges: AnimateLayoutChanges = (args) => {
 
 export function TaskCard({ task }: TaskCardProps) {
   const { openTaskDetail } = useUIStore();
-  const { taskTags, fetchTagsForTask } = useTagStore();
+  const tags = useTagStore((s) => s.taskTags[task.id]) ?? [];
+  const fetchTagsForTask = useTagStore((s) => s.fetchTagsForTask);
+  const fetchedRef = useRef(false);
   const priorityCfg = PRIORITY_CONFIG[task.priority];
 
   const {
@@ -35,18 +36,17 @@ export function TaskCard({ task }: TaskCardProps) {
   });
 
   useEffect(() => {
-    if (!taskTags[task.id]) {
+    if (!fetchedRef.current) {
+      fetchedRef.current = true;
       fetchTagsForTask(task.id);
     }
-  }, [task.id, taskTags, fetchTagsForTask]);
+  }, [task.id, fetchTagsForTask]);
 
   const style = {
-    transform: CSS.Translate.toString(transform),
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
     transition,
     opacity: isDragging ? 0 : undefined,
   };
-
-  const tags = taskTags[task.id] || [];
 
   return (
     <div
