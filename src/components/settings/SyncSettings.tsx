@@ -3,7 +3,7 @@ import { useSyncStore } from "@/stores/syncStore";
 import { RefreshCw, Cloud, CloudOff } from "lucide-react";
 
 export function SyncSettings() {
-  const { settings, syncing, lastResult, fetchSettings, saveSettings, runSync } = useSyncStore();
+  const { settings, syncing, lastResult, lastError, fetchSettings, saveSettings, runSync } = useSyncStore();
   const [enabled, setEnabled] = useState(false);
   const [serverUrl, setServerUrl] = useState("");
   const [syncKey, setSyncKey] = useState("");
@@ -93,10 +93,17 @@ export function SyncSettings() {
           </button>
         </div>
 
-        {settings.last_sync && (
+        {settings.last_sync && !settings.last_sync.startsWith("1970") && (
           <p className="text-xs text-muted-foreground">
             Last synced: {new Date(settings.last_sync).toLocaleString()}
           </p>
+        )}
+
+        {lastError && (
+          <div className="flex items-center gap-1.5 text-xs text-destructive">
+            <CloudOff size={14} />
+            {lastError}
+          </div>
         )}
 
         {lastResult && lastResult.status === "ok" && (
@@ -110,6 +117,13 @@ export function SyncSettings() {
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <CloudOff size={14} />
             Sync is disabled
+          </div>
+        )}
+
+        {lastResult && lastResult.status === "not_configured" && (
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <CloudOff size={14} />
+            Enter server URL and sync key, then save
           </div>
         )}
       </div>

@@ -30,15 +30,24 @@ pub fn apply_changes(
                 .map(|c| format!("{} = excluded.{}", c, c))
                 .collect();
 
-            let sql = format!(
-                "INSERT INTO {} ({}) VALUES ({}) ON CONFLICT(id) DO UPDATE SET {} WHERE excluded.updated_at >= {}.updated_at OR {}.updated_at IS NULL",
-                table,
-                columns.join(", "),
-                placeholders.join(", "),
-                update_clauses.join(", "),
-                table,
-                table
-            );
+            let sql = if *table == "task_tags" {
+                format!(
+                    "INSERT OR REPLACE INTO {} ({}) VALUES ({})",
+                    table,
+                    columns.join(", "),
+                    placeholders.join(", "),
+                )
+            } else {
+                format!(
+                    "INSERT INTO {} ({}) VALUES ({}) ON CONFLICT(id) DO UPDATE SET {} WHERE excluded.updated_at >= {}.updated_at OR {}.updated_at IS NULL",
+                    table,
+                    columns.join(", "),
+                    placeholders.join(", "),
+                    update_clauses.join(", "),
+                    table,
+                    table
+                )
+            };
 
             let values: Vec<rusqlite::types::Value> = columns
                 .iter()

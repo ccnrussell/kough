@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { isMobile } from "@/lib/platform";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
-export function Sidebar() {
+function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { boards, activeBoardId, createBoard, setActiveBoard, deleteBoard } =
     useBoardStore();
   const { activeView, setActiveView } = useUIStore();
@@ -24,14 +24,24 @@ export function Sidebar() {
     setNewTitle("");
     setShowInput(false);
     setActiveBoard(board.id);
+    onNavigate?.();
+  };
+
+  const handleViewChange = (view: "board" | "activity" | "trash" | "settings") => {
+    setActiveView(view);
+    onNavigate?.();
+  };
+
+  const handleBoardSelect = (boardId: string) => {
+    setActiveBoard(boardId);
+    onNavigate?.();
   };
 
   return (
     <>
-    <div className="flex h-full w-56 flex-col border-r border-border bg-card">
       <div className="flex items-center justify-center gap-1 px-2 pt-3 pb-2">
         <button
-          onClick={() => setActiveView("board")}
+          onClick={() => handleViewChange("board")}
           title="Board"
           className={cn(
             "rounded-md p-2 transition-colors",
@@ -43,21 +53,21 @@ export function Sidebar() {
           <Kanban size={16} />
         </button>
         {!isMobile() && (
-        <button
-          onClick={() => setActiveView("activity")}
-          title="Activity"
-          className={cn(
-            "rounded-md p-2 transition-colors",
-            activeView === "activity"
-              ? "bg-accent text-accent-foreground"
-              : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-          )}
-        >
-          <Clock size={16} />
-        </button>
+          <button
+            onClick={() => handleViewChange("activity")}
+            title="Activity"
+            className={cn(
+              "rounded-md p-2 transition-colors",
+              activeView === "activity"
+                ? "bg-accent text-accent-foreground"
+                : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+            )}
+          >
+            <Clock size={16} />
+          </button>
         )}
         <button
-          onClick={() => setActiveView("trash")}
+          onClick={() => handleViewChange("trash")}
           title="Trash"
           className={cn(
             "rounded-md p-2 transition-colors",
@@ -69,7 +79,7 @@ export function Sidebar() {
           <Trash2 size={16} />
         </button>
         <button
-          onClick={() => setActiveView("settings")}
+          onClick={() => handleViewChange("settings")}
           title="Settings"
           className={cn(
             "rounded-md p-2 transition-colors",
@@ -94,7 +104,7 @@ export function Sidebar() {
                     ? "bg-accent text-accent-foreground"
                     : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
                 )}
-                onClick={() => setActiveBoard(board.id)}
+                onClick={() => handleBoardSelect(board.id)}
               >
                 <span className="truncate">{board.title}</span>
                 <button
@@ -140,12 +150,12 @@ export function Sidebar() {
           </div>
         </>
       )}
-    </div>
+
       <ConfirmDialog
         open={confirmDelete.open}
         onOpenChange={(open) => setConfirmDelete({ open, boardId: open ? confirmDelete.boardId : null })}
         title="Delete Board?"
-        description={`This will move "${boards.find((b) => b.id === confirmDelete.boardId)?.title || ""}" and all its contents to trash. You can restore it within 30 days.`}
+        description={`This will move "${boards.find((b) => b.id === confirmDelete.boardId)?.title || ""}" and all its contents to trash. You can restore them within 30 days.`}
         confirmLabel="Delete Board"
         onConfirm={() => {
           if (confirmDelete.boardId) {
@@ -154,5 +164,32 @@ export function Sidebar() {
         }}
       />
     </>
+  );
+}
+
+export function Sidebar() {
+  const { sidebarOpen, setSidebarOpen } = useUIStore();
+  const mobile = isMobile();
+
+  if (!sidebarOpen) return null;
+
+  if (mobile) {
+    return (
+      <>
+        <div
+          className="fixed inset-0 z-40 bg-black/50 animate-in fade-in-0"
+          onClick={() => setSidebarOpen(false)}
+        />
+        <div className="fixed inset-y-0 left-0 z-50 flex w-56 flex-col bg-card border-r border-border animate-in slide-in-from-left">
+          <SidebarContent onNavigate={() => setSidebarOpen(false)} />
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <div className="flex h-full w-56 flex-col border-r border-border bg-card">
+      <SidebarContent />
+    </div>
   );
 }

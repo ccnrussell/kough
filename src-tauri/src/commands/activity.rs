@@ -114,3 +114,12 @@ pub fn get_app_icon(
 
     Ok(String::new())
 }
+
+#[cfg(not(windows))]
+#[tauri::command]
+pub fn get_app_icon(
+    _db: State<'_, DbState>,
+    _app_name: String,
+) -> Result<String, AppError> {
+    Ok(String::new())
+}
