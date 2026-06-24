@@ -6,6 +6,7 @@ import type {
   CreateTaskInput, UpdateTaskInput, MoveTaskInput, ReorderTaskInput,
   CreateTagInput, UpdateTagInput,
   AppUsageSummary, BrowserUsageSummary, ActiveTracking, TrashItem,
+  SyncSettings, SyncResult,
 } from "@/types";
 
 const cmd = <T>(name: string, args?: Record<string, unknown>): Promise<T> =>
@@ -62,5 +63,11 @@ export const api = {
     permanentlyDeleteColumn: (columnId: string) => cmd<void>("permanently_delete_column", { columnId }),
     permanentlyDeleteTask: (taskId: string) => cmd<void>("permanently_delete_task", { taskId }),
     permanentlyDeleteTag: (tagId: string) => cmd<void>("permanently_delete_tag", { tagId }),
+  },
+  sync: {
+    getSettings: () => cmd<SyncSettings>("get_sync_settings"),
+    saveSettings: (enabled: boolean, serverUrl: string, syncKey: string) =>
+      cmd<void>("save_sync_settings", { enabled, serverUrl, syncKey }),
+    run: () => cmd<SyncResult>("run_sync"),
   },
 };

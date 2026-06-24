@@ -127,3 +127,16 @@ export interface TrashItem {
   tasks: Task[];
   tags: Tag[];
 }
+
+export interface SyncSettings {
+  enabled: boolean;
+  server_url: string;
+  sync_key: string;
+  last_sync: string;
+}
+
+export interface SyncResult {
+  status: string;
+  server_time?: string;
+  applied?: number;
+}
