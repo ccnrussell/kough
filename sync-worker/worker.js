@@ -30,7 +30,12 @@ async function handleSync(request, env) {
 
         let sql;
         if (table === "task_tags") {
-          sql = `INSERT OR REPLACE INTO ${table} (${columns.join(", ")}) VALUES (${placeholders})`;
+          sql = `INSERT INTO ${table} (${columns.join(", ")}) VALUES (${placeholders})
+           ON CONFLICT(task_id, tag_id) DO UPDATE SET ${columns
+             .filter((c) => c !== "task_id" && c !== "tag_id")
+             .map((c) => `${c} = excluded.${c}`)
+             .join(", ")}
+           WHERE excluded.updated_at >= ${table}.updated_at OR ${table}.updated_at IS NULL`;
         } else {
           const updateClauses = columns
             .filter((c) => c !== "id")
@@ -47,12 +52,14 @@ async function handleSync(request, env) {
       }
     }
 
+    await env.DB.prepare("DELETE FROM task_tags WHERE deleted_at IS NOT NULL").run();
+
     const result = {};
     for (const table of SYNC_TABLES) {
       let query;
       if (table === "task_tags") {
-        query = `SELECT * FROM ${table}`;
-        const { results } = await env.DB.prepare(query).all();
+        query = `SELECT * FROM ${table} WHERE updated_at > ?1 OR (deleted_at IS NOT NULL AND deleted_at > ?1)`;
+        const { results } = await env.DB.prepare(query).bind(last_sync).all();
         result[table] = results || [];
       } else {
         query = `SELECT * FROM ${table} WHERE updated_at > ?1 OR (updated_at IS NULL AND deleted_at > ?1)`;

@@ -424,7 +424,10 @@ pub fn delete_tag(conn: &Connection, tag_id: &str) -> Result<(), AppError> {
     if rows == 0 {
         return Err(AppError::NotFound(format!("Tag {} not found", tag_id)));
     }
-    conn.execute("DELETE FROM task_tags WHERE tag_id = ?1", params![tag_id])?;
+    conn.execute(
+        "UPDATE task_tags SET deleted_at = ?1, updated_at = ?1 WHERE tag_id = ?2 AND deleted_at IS NULL",
+        params![now, tag_id],
+    )?;
     Ok(())
 }
 
@@ -432,7 +435,7 @@ pub fn get_tags_for_task(conn: &Connection, task_id: &str) -> Result<Vec<tag::Ta
     let mut stmt = conn.prepare(
         "SELECT t.id, t.board_id, t.name, t.color FROM tags t
          JOIN task_tags tt ON t.id = tt.tag_id
-         WHERE tt.task_id = ?1",
+         WHERE tt.task_id = ?1 AND tt.deleted_at IS NULL",
     )?;
     let tags = stmt
         .query_map(params![task_id], |row| {
@@ -448,9 +451,14 @@ pub fn get_tags_for_task(conn: &Connection, task_id: &str) -> Result<Vec<tag::Ta
 }
 
 pub fn add_tag_to_task(conn: &Connection, task_id: &str, tag_id: &str) -> Result<(), AppError> {
+    let now = chrono::Utc::now().to_rfc3339();
     conn.execute(
-        "INSERT OR IGNORE INTO task_tags (task_id, tag_id) VALUES (?1, ?2)",
-        params![task_id, tag_id],
+        "INSERT OR IGNORE INTO task_tags (task_id, tag_id, updated_at, deleted_at) VALUES (?1, ?2, ?3, NULL)",
+        params![task_id, tag_id, now],
+    )?;
+    conn.execute(
+        "UPDATE task_tags SET deleted_at = NULL, updated_at = ?3 WHERE task_id = ?1 AND tag_id = ?2 AND deleted_at IS NOT NULL",
+        params![task_id, tag_id, now],
     )?;
     Ok(())
 }
@@ -460,9 +468,10 @@ pub fn remove_tag_from_task(
     task_id: &str,
     tag_id: &str,
 ) -> Result<(), AppError> {
+    let now = chrono::Utc::now().to_rfc3339();
     conn.execute(
-        "DELETE FROM task_tags WHERE task_id = ?1 AND tag_id = ?2",
-        params![task_id, tag_id],
+        "UPDATE task_tags SET deleted_at = ?3, updated_at = ?3 WHERE task_id = ?1 AND tag_id = ?2 AND deleted_at IS NULL",
+        params![task_id, tag_id, now],
     )?;
     Ok(())
 }
@@ -472,7 +481,7 @@ pub fn get_tasks_by_tag(conn: &Connection, tag_id: &str) -> Result<Vec<task::Tas
         "SELECT t.id, t.column_id, t.title, t.description_md, t.position, t.priority, t.due_date, t.created_at, t.updated_at
          FROM tasks t
          JOIN task_tags tt ON t.id = tt.task_id
-         WHERE tt.tag_id = ?1
+         WHERE tt.tag_id = ?1 AND tt.deleted_at IS NULL
          ORDER BY t.position ASC"
     )?;
     let tasks = stmt

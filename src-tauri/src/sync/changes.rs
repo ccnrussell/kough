@@ -10,30 +10,17 @@ pub fn collect_changes(
     let mut changes: HashMap<String, Vec<serde_json::Value>> = HashMap::new();
 
     for table in SYNC_TABLES {
-        let (sql, use_param): (String, bool) = if *table == "task_tags" {
-            (format!("SELECT * FROM {}", table), false)
-        } else {
-            (
-                format!(
-                    "SELECT * FROM {} WHERE updated_at > ?1 OR (deleted_at IS NOT NULL AND deleted_at > ?1)",
-                    table
-                ),
-                true,
-            )
-        };
+        let sql = format!(
+            "SELECT * FROM {} WHERE updated_at > ?1 OR (deleted_at IS NOT NULL AND deleted_at > ?1)",
+            table
+        );
 
         let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
-        let rows: Vec<serde_json::Value> = if use_param {
-            stmt.query_map(rusqlite::params![since], |row| row_to_json(row))
-                .map_err(|e| e.to_string())?
-                .collect::<Result<Vec<_>, _>>()
-                .map_err(|e| e.to_string())?
-        } else {
-            stmt.query_map([], |row| row_to_json(row))
-                .map_err(|e| e.to_string())?
-                .collect::<Result<Vec<_>, _>>()
-                .map_err(|e| e.to_string())?
-        };
+        let rows: Vec<serde_json::Value> = stmt
+            .query_map(rusqlite::params![since], |row| row_to_json(row))
+            .map_err(|e| e.to_string())?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| e.to_string())?;
 
         if !rows.is_empty() {
             changes.insert(table.to_string(), rows);

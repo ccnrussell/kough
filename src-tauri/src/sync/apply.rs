@@ -26,16 +26,19 @@ pub fn apply_changes(
 
             let update_clauses: Vec<String> = columns
                 .iter()
-                .filter(|&&c| c != "id")
+                .filter(|&&c| c != "id" && c != "task_id" && c != "tag_id")
                 .map(|c| format!("{} = excluded.{}", c, c))
                 .collect();
 
             let sql = if *table == "task_tags" {
                 format!(
-                    "INSERT OR REPLACE INTO {} ({}) VALUES ({})",
+                    "INSERT INTO {} ({}) VALUES ({}) ON CONFLICT(task_id, tag_id) DO UPDATE SET {} WHERE excluded.updated_at >= {}.updated_at OR {}.updated_at IS NULL",
                     table,
                     columns.join(", "),
                     placeholders.join(", "),
+                    update_clauses.join(", "),
+                    table,
+                    table
                 )
             } else {
                 format!(
@@ -75,6 +78,9 @@ pub fn apply_changes(
             applied += 1;
         }
     }
+
+    conn.execute("DELETE FROM task_tags WHERE deleted_at IS NOT NULL", [])
+        .map_err(|e| format!("Failed to cleanup soft-deleted task_tags: {}", e))?;
 
     Ok(applied)
 }

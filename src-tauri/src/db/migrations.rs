@@ -129,6 +129,13 @@ CREATE TABLE IF NOT EXISTS sync_meta (
 ALTER TABLE tags ADD COLUMN updated_at TEXT;
 UPDATE tags SET updated_at = datetime('now');
 ",
+    "
+ALTER TABLE task_tags ADD COLUMN updated_at TEXT;
+ALTER TABLE task_tags ADD COLUMN deleted_at TEXT;
+UPDATE task_tags SET updated_at = datetime('now');
+CREATE INDEX IF NOT EXISTS idx_task_tags_updated_at ON task_tags(updated_at);
+CREATE INDEX IF NOT EXISTS idx_task_tags_deleted_at ON task_tags(deleted_at);
+",
 ];
 
 fn column_exists(conn: &Connection, table: &str, column: &str) -> Result<bool, AppError> {
