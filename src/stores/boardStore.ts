@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { Board, Column } from "@/types";
 import { api } from "@/lib/invoke";
+import { triggerSync } from "@/stores/syncStore";
 
 interface BoardState {
   boards: Board[];
@@ -48,6 +49,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       set({ activeBoardId: board.id });
       await get().fetchColumns(board.id);
     }
+    triggerSync();
     return board;
   },
 
@@ -56,6 +58,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     set((s) => ({
       boards: s.boards.map((b) => (b.id === id ? { ...b, title } : b)),
     }));
+    triggerSync();
   },
 
   deleteBoard: async (id: string) => {
@@ -69,6 +72,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     if (newActive && newActive !== activeBoardId) {
       await get().fetchColumns(newActive);
     }
+    triggerSync();
   },
 
   setActiveBoard: (id: string) => {

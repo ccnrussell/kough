@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { Task } from "@/types";
 import { api } from "@/lib/invoke";
+import { triggerSync } from "@/stores/syncStore";
 
 interface TaskState {
   tasks: Task[];
@@ -33,6 +34,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   createTask: async (columnId, title, priority) => {
     const task = await api.tasks.create({ column_id: columnId, title, priority });
     set((s) => ({ tasks: [...s.tasks, task] }));
+    triggerSync();
     return task;
   },
 
@@ -42,6 +44,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     set((s) => ({
       tasks: s.tasks.map((t) => (t.id === id ? updated : t)),
     }));
+    triggerSync();
   },
 
   moveTask: async (taskId, targetColumnId, newPosition) => {
@@ -51,6 +54,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
         t.id === taskId ? { ...t, column_id: targetColumnId, position: newPosition } : t
       ),
     }));
+    triggerSync();
   },
 
   reorderTask: async (taskId, newPosition) => {
@@ -60,11 +64,13 @@ export const useTaskStore = create<TaskState>((set, get) => ({
         t.id === taskId ? { ...t, position: newPosition } : t
       ),
     }));
+    triggerSync();
   },
 
   deleteTask: async (taskId) => {
     await api.tasks.delete(taskId);
     set((s) => ({ tasks: s.tasks.filter((t) => t.id !== taskId) }));
+    triggerSync();
   },
 
   getTasksByColumn: (columnId: string) => {

@@ -4,6 +4,7 @@ import { useTaskStore } from "@/stores/taskStore";
 import { useTagStore } from "@/stores/tagStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useActivityStore } from "@/stores/activityStore";
+import { useSyncStore } from "@/stores/syncStore";
 import { Search, X } from "lucide-react";
 import { TitleBar } from "./TitleBar";
 import { Sidebar } from "./Sidebar";
@@ -39,6 +40,14 @@ export function MainContent() {
       useActivityStore.getState().clearIconCache();
     }
   }, [activeView]);
+
+  const { fetchSettings, runSync } = useSyncStore();
+
+  useEffect(() => {
+    fetchSettings().then(() => {
+      runSync();
+    });
+  }, [fetchSettings, runSync]);
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
