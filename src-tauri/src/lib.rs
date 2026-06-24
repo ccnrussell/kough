@@ -110,6 +110,9 @@ pub fn run() {
             commands::trash::permanently_delete_column,
             commands::trash::permanently_delete_task,
             commands::trash::permanently_delete_tag,
+            commands::sync::get_sync_settings,
+            commands::sync::save_sync_settings,
+            commands::sync::run_sync,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
